@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Update Session Status</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #1a1a1a;
+            color: #f3f4f6;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            padding: 2rem;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: #232323;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        h1, h2 {
+            color: #FF7878;
+        }
+        pre {
+            background-color: #2a2a2a;
+            color: #f3f4f6;
+            padding: 1rem;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+        .btn-primary {
+            background-color: #FF7878;
+            border-color: #FF7878;
+        }
+        .btn-primary:hover {
+            background-color: #e56c6c;
+            border-color: #e56c6c;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="mb-4">Update Session Status</h1>
+        <p>Tool ini akan mengubah status semua sesi workout menjadi 'completed' dan mengisi data yang diperlukan jika kosong.</p>
+        
+        <div class="row mb-4">
+            <div class="col">
+                <h2>Data Sesi Saat Ini</h2>
+                <pre id="current-sessions">Loading...</pre>
+            </div>
+        </div>
+        
+        <div class="row mb-4">
+            <div class="col">
+                <button id="update-btn" class="btn btn-primary me-2">Update Semua Sesi</button>
+                <button id="fix-chart-btn" class="btn btn-success">Fix Chart Data</button>
+                <button id="go-dashboard" class="btn btn-secondary ms-2">Kembali ke Dashboard</button>
+            </div>
+        </div>
+        
+        <div class="row">
+            <div class="col">
+                <h2>Hasil Update</h2>
+                <pre id="result">Klik tombol update untuk memulai...</pre>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Tampilkan data sesi saat ini
+            displayCurrentSessions();
+            
+            // Event listener untuk tombol update
+            document.getElementById('update-btn').addEventListener('click', updateAllSessions);
+            
+            // Event listener untuk tombol fix chart
+            document.getElementById('fix-chart-btn').addEventListener('click', fixChartData);
+            
+            // Event listener untuk tombol kembali
+            document.getElementById('go-dashboard').addEventListener('click', function() {
+                window.location.href = 'index.html';
+            });
+        });
+        
+        // Fungsi untuk menampilkan data sesi saat ini
+        function displayCurrentSessions() {
+            const workoutSessions = JSON.parse(localStorage.getItem('workout_sessions') || '[]');
+            document.getElementById('current-sessions').textContent = 
+                JSON.stringify(workoutSessions, null, 2);
+        }
+        
+        // Fungsi untuk mengupdate semua sesi
+        function updateAllSessions() {
+            const workoutSessions = JSON.parse(localStorage.getItem('workout_sessions') || '[]');
+            const resultElement = document.getElementById('result');
+            
+            if (workoutSessions.length === 0) {
+                resultElement.textContent = "Tidak ada sesi yang ditemukan.";
+                return;
+            }
+            
+            let updateCount = 0;
+            
+            // Update setiap sesi
+            workoutSessions.forEach(session => {
+                // Set status menjadi completed
+                if (session.status !== 'completed') {
+                    session.status = 'completed';
+                    updateCount++;
+                }
+                
+                // Pastikan ada endTime
+                if (!session.endTime) {
+                    session.endTime = new Date().toISOString();
+                }
+                
+                // Generate random stats jika tidak ada
+                if (!session.reps) {
+                    session.reps = Math.floor(Math.random() * 20) + 10; // 10-30
+                }
+                
+                if (!session.duration) {
+                    session.duration = Math.floor(Math.random() * 30) + 15; // 15-45 menit
+                }
+                
+                if (!session.sets) {
+                    session.sets = Math.floor(Math.random() * 3) + 1; // 1-3 set
+                }
+                
+                if (!session.calories) {
+                    const weight = session.weight || 10;
+                    const duration = session.duration || 30;
+                    session.calories = Math.floor(weight * duration * 0.35);
+                }
+            });
+            
+            // Simpan kembali ke localStorage
+            localStorage.setItem('workout_sessions', JSON.stringify(workoutSessions));
+            
+            // Tampilkan hasil
+            resultElement.textContent = 
+                `${updateCount} sesi diupdate menjadi 'completed'.\nTotal ${workoutSessions.length} sesi diproses.\n\n` +
+                JSON.stringify(workoutSessions, null, 2);
+            
+            // Refresh tampilan data saat ini
+            displayCurrentSessions();
+        }
+        
+        // Fungsi untuk memperbaiki data untuk chart
+        function fixChartData() {
+            // Buat array tanggal untuk 15 hari terakhir
+            const dates = [];
+            const now = new Date();
+            
+            for (let i = 14; i >= 0; i--) {
+                const date = new Date();
+                date.setDate(now.getDate() - i);
+                dates.push(date);
+            }
+            
+            // Ambil data workout dari localStorage
+            const workoutSessions = JSON.parse(localStorage.getItem('workout_sessions') || '[]');
+            
+            // Jika tidak ada data, buat data dummy untuk 15 hari
+            if (workoutSessions.length < 5) {
+                const newSessions = [];
+                
+                dates.forEach(date => {
+                    // Hanya buat data untuk 70% dari hari
+                    if (Math.random() < 0.7) {
+                        const weight = Math.floor(Math.random() * 30) + 10; // 10-40 kg
+                        const reps = Math.floor(Math.random() * 20) + 5; // 5-25 reps
+                        const sets = Math.floor(Math.random() * 3) + 1; // 1-3 sets
+                        const duration = Math.floor(Math.random() * 40) + 10; // 10-50 menit
+                        
+                        newSessions.push({
+                            id: Date.now() + Math.floor(Math.random() * 1000),
+                            userId: 1,
+                            weight: weight,
+                            reps: reps,
+                            sets: sets,
+                            duration: duration,
+                            calories: Math.floor(weight * duration * 0.35),
+                            startTime: new Date(date).toISOString(),
+                            endTime: new Date(date.getTime() + duration * 60000).toISOString(),
+                            status: 'completed'
+                        });
+                    }
+                });
+                
+                // Gabungkan dengan data yang sudah ada
+                const allSessions = [...workoutSessions, ...newSessions];
+                
+                // Simpan kembali ke localStorage
+                localStorage.setItem('workout_sessions', JSON.stringify(allSessions));
+                
+                // Tampilkan hasil
+                document.getElementById('result').textContent = 
+                    `${newSessions.length} sesi baru ditambahkan.\nTotal sekarang: ${allSessions.length} sesi.\n\n` +
+                    JSON.stringify(allSessions, null, 2);
+                
+                // Refresh tampilan data saat ini
+                displayCurrentSessions();
+            } else {
+                document.getElementById('result').textContent = 
+                    `Sudah ada ${workoutSessions.length} sesi data, tidak perlu menambahkan data dummy.`;
+            }
+        }
+    </script>
+</body>
+</html>
